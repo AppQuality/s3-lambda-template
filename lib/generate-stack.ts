@@ -1,8 +1,16 @@
 import { Duration, Stack, StackProps } from "aws-cdk-lib";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
-import { Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import {
+  Effect,
+  PolicyDocument,
+  PolicyStatement,
+  Role,
+  ServicePrincipal,
+} from "aws-cdk-lib/aws-iam";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { S3EventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -23,6 +31,8 @@ export class S3LambdaStack extends Stack {
       ? require("./db-config-production.json")
       : require("./db-config-staging.json");
 
+    const bucket = new s3.Bucket(this, `${config?.projectName}-bucket`);
+
     // create a role for the lambda
     const lambdaRole = new Role(this, `${config?.projectName}-role`, {
       assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
@@ -36,6 +46,18 @@ export class S3LambdaStack extends Stack {
             "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
         },
       ],
+      inlinePolicies: {
+        // allow deleting files from the bucket
+        "s3-bucket-policy": new PolicyDocument({
+          statements: [
+            new PolicyStatement({
+              resources: [bucket.bucketArn],
+              actions: ["s3:DeleteObject"],
+              effect: Effect.ALLOW,
+            }),
+          ],
+        }),
+      },
     });
 
     const getExistingVpc = Vpc.fromLookup(this, "ImportVPC", {
@@ -53,5 +75,11 @@ export class S3LambdaStack extends Stack {
         ...db,
       },
     });
+
+    lambda.addEventSource(
+      new S3EventSource(bucket, {
+        events: [s3.EventType.OBJECT_CREATED],
+      })
+    );
   }
 }
