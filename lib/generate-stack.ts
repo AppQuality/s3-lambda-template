@@ -1,7 +1,5 @@
 import { Duration, Stack, StackProps } from "aws-cdk-lib";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
-import { Rule, Schedule } from "aws-cdk-lib/aws-events";
-import * as targets from "aws-cdk-lib/aws-events-targets";
 import { Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
@@ -10,7 +8,7 @@ import * as path from "path";
 
 import { StackConfig } from "../interfaces/stack-settings";
 
-export class TimedLambdaStack extends Stack {
+export class S3LambdaStack extends Stack {
   constructor(
     scope: Construct,
     id: string,
@@ -45,7 +43,7 @@ export class TimedLambdaStack extends Stack {
     });
     // Create a lambda function to process the queue
     const lambda = new NodejsFunction(this, `${config?.projectName}-lambda`, {
-      timeout: Duration.seconds(5),
+      timeout: Duration.seconds(15),
       runtime: Runtime.NODEJS_14_X,
       handler: "main",
       role: lambdaRole,
@@ -54,20 +52,6 @@ export class TimedLambdaStack extends Stack {
       environment: {
         ...db,
       },
-    });
-    const lambdaTarget = new targets.LambdaFunction(lambda);
-
-    // Create eventbridge rule with schedule once a day
-    const rule = new Rule(this, "ScheduleRule", {
-      schedule: Schedule.cron({
-        minute: "0",
-        hour: "0",
-        day: "1",
-        month: "*",
-      }),
-      enabled: true,
-      description: "Schedule for timed lambda",
-      targets: [lambdaTarget],
     });
   }
 }

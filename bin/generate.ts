@@ -3,7 +3,7 @@ import "source-map-support/register";
 
 import * as cdk from "aws-cdk-lib";
 
-import { TimedLambdaStack } from "../lib/generate-stack";
+import { S3LambdaStack } from "../lib/generate-stack";
 
 require("dotenv").config();
 
@@ -13,7 +13,7 @@ const envEU = { account: "163482350712", region: "eu-west-1" };
 const environments = ["production", "staging"];
 
 environments.forEach((env) => {
-  new TimedLambdaStack(
+  new S3LambdaStack(
     app,
     `${process.env.PROJECT_NAME || ""}-stack-${env}`,
     {
